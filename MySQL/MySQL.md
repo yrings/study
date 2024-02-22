@@ -139,6 +139,10 @@ GROUP BY column1;
 - `SELECT` 子句中的列通常要么是分组列，要么是聚合函数的参数。
 - 可以使用多个列进行分组，只需在 `GROUP BY` 子句中用逗号分隔列名即可。
 
+
+
+
+
 #### 使用 WITH ROLLUP 和 coalesce
 
 `WITH ROLLUP` 可以实现在分组统计数据基础上再进行相同的统计（SUM,AVG,COUNT…）
@@ -184,6 +188,92 @@ JOIN 按照功能大致分为如下三类：
 SELECT column1, column2, ...
 FROM table1
 INNER JOIN table2 ON table1.column_name = table2.column_name;
+```
+
+
+
+### Limit
+
+`LIMIT` 和 `OFFSET` 子句通常和`ORDER BY` 语句一起使用，当我们对整个结果集排序之后，我们可以 `LIMIT`来指定只返回多少行结果 ,用 `OFFSET`来指定从哪一行开始返回。你可以想象一下从一条长绳子剪下一小段的过程，我们通过 `OFFSET` 指定从哪里开始剪，用 `LIMIT` 指定剪下多少长度。
+
+limit查询
+
+```
+SELECT column, another_column, … 
+FROM mytable WHERE condition(s)
+ORDER BY column ASC/DESC 
+LIMIT num_limit OFFSET num_offset;
+```
+
+OFFSET 不会从自己所在索引开始遍历，在下一个
+
+
+
+### 类型转换
+
+CAST(expression AS TYPE) 函数可以将任何类型的值转换为具有指定类型的值,利用该函数可以直接在数据库层处理部分因数据类型引起的问题。
+以下为该函数支持的数据类型
+
+支持的 TYPE 类型	描述
+BINARY	二进制型
+CHAR	字符型
+DATE	日期，格式为 ‘YYYY-MM-DD’
+DATETIME	日期加具体的时间，格式为 ‘YYYY-MM-DD HH:MM:SS’
+TIME	时间，格式为 ‘HH:MM:SS’
+DECIMAL	float 型
+SIGNED	int 型
+UNSIGNED	无符号int
+下面对几种转换进行示例讲解
+说明：示例中的固定值可以换为实际的查询的表的字段，例如：id
+
+```sql
+1、固定值转为BINARY 二进制型
+
+SELECT CAST( 1231 AS BINARY ) AS result 
+
+运行结果：1231 
+
+2、int类型值转为CHAR 字符型
+
+SELECT CAST(1995 AS CHAR) as result
+
+运行结果："1995"
+
+3、固定时间字符串转为DATE 日期，格式为 'YYYY-MM-DD’;
+
+SELECT CAST('2019-08-29 16:50:21' as date) as result
+
+运行结果：2019-08-29;
+
+4、固定时间字符串转为DATETIME 日期加具体的时间，格式为 'YYYY-MM-DD HH:MM:SS’
+
+SELECT CAST('2019-08-29 16:50:21' as DATETIME) as result
+
+运行结果：2019-08-29 16:50:21
+
+5、固定时间字符串转为TIME 时间，格式为 'HH:MM:SS’
+
+SELECT CAST('2019-08-29 16:50:21' as TIME) as result
+
+运行结果：16:50:21
+
+6、float型值通过DECIMAL 获取精度
+
+SELECT CAST(220.23211231 AS DECIMAL(10, 3)) AS result 
+
+运行结果：220.232;
+
+7、固定字符串转为SIGNED int 型
+
+SELECT CAST("12321" AS SIGNED  ) AS result 
+
+运行结果：12321;
+
+8、固定字符串转为UNSIGNED 无符号int
+
+SELECT CAST("12321" AS UNSIGNED   ) AS result 
+
+运行结果：12321
 ```
 
 

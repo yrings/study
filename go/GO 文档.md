@@ -6,6 +6,70 @@ LOOP 是 Go 语言中的一个标签（label），用于标记[循环语句](htt
 
 
 
+## container
+
+### /list
+
+List结构：
+
+```go
+type List struct {
+    root Element // sentinel list element, only &root, root.prev, and root.next are used
+    len  int     // current list length excluding (this) sentinel element
+}
+----------
+root：类型为Element的结构体。
+len：用于记录List的长度(除去哨兵节点)。
+```
+
+Element结构：
+
+```go
+type Element struct {
+    list *List
+    Value interface{}
+       next, prev *Element
+}
+```
+
+- `list`：指向`List`的指针，用于标识当前节点属于哪一个LIST
+- `Value`：用于存储元素的值。
+- `next`, `prev`： 指向`Element`的指针，用于定位后一个节点与前一个节点。
+
+方法：
+
+```go
+基础方法：
+Next()：返回当前节点的下一个节点或者nil。从实现可以看出，当list为空或者下一个节点为哨兵节点时，返回nil。
+Prev()：返回当前节点的上一个节点或者nil，跟上面类似。
+New()：返回一个初始化完成的链表。
+Len()：回链表中的元素个数，时间复杂度为O(1)。
+Front()：返回链表的第一个元素。当链表为空时，返回nil。
+Back()：返回链表的最后一个元素。当链表为空时，返回nil。
+
+插入元素：
+insert()：`未导出函数`。在元素at的位置后面插入一个元素，链表长度加一，返回插入的元素。
+insertValue()：`未导出函数`。将Value包装成Element然后进行insert()。
+InsertBefore()：调用insertValue()在元素mark前插入。要求元素mark属于调用的链表对象且不为nil。
+InsertAfter()：与InsertBefore()类似，在元素mark后插入。
+PushFront()：调用insertValue()方法在表头插入。返回插入的元素。
+PushBack()：调用insertValue()方法在表尾插入。返回插入的元素。
+
+删除元素：
+remove()：`未导出函数`。从链表中删除元素e，链表长度减一，返回被删除的元素。
+Remove()：当元素e属于被调用链表的元素时，调用remove()函数，返回e.Value。
+
+合并链表：
+PushBackList()：将另一个链表浅拷贝到当前链表的末尾。要求两个链表均不为nil。
+PushFronList()：将另一个链表浅拷贝到当前链表的开头。要求两个链表均不为nil。
+```
+
+
+
+
+
+
+
 ## time
 
 > time.Now() 获取时间戳
@@ -394,7 +458,7 @@ func (dec *Decoder) DecodeValue(v reflect.Value) error
 
 ### /binary
 
-### Go 处理固定长度字节序
+Go 处理固定长度字节序
 
 Go中处理大小端序的代码位于 encoding/binary ,包中的全局变量BigEndian用于操作大端序数据，LittleEndian用于操作小端序数据，这两个变量所对应的数据类型都实行了ByteOrder接口：
 
@@ -411,6 +475,8 @@ type ByteOrder interface {
 ```
 
 其中，前三个方法用于读取数据，后三个方法用于写入数据。
+
+
 
 ## log
 

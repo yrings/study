@@ -293,6 +293,16 @@ docker rm -f [容器id或者容器名]
 # 删除多个
 docker rm -f $(docker ps -a -q)
 docker ps -a -q | xargs docker rm
+
+# 设置容器是否自启动
+docker update --restart=always 容器名或容器ID
+docker update --restart=always <CONTAINER ID>
+# 例如将tomcat设为自启动
+docker update --restart=always tomcat
+# docker update --restart=no 容器名或容器ID
+docker update --restart=no <CONTAINER ID>
+# 例如取消tomcat的自启动
+docker update --restart=no tomcat
 ```
 
 * **重要命令**

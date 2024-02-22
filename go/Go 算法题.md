@@ -201,5 +201,133 @@ func removeElement(nums []int, val int) int {
 
 
 
+## 二、二叉树
+
+### 迭代遍历
+
+```go
+type TreeNode struct {
+	Val   int
+	Left  *TreeNode
+	Right *TreeNode
+}
+
+func preorderTraversal(root *TreeNode) []int {
+	ans := []int{}
+
+	if root == nil {
+		return ans
+	}
+
+	st := list.New()
+	st.PushBack(root)
+
+	for st.Len() > 0 {
+		node := st.Remove(st.Back()).(*TreeNode)
+		
+		ans = append(ans, node.Val)
+		if node.Right != nil {
+			st.PushBack(node.Right)
+		} 
+		if node.Left  != nil {
+			st.PushBack(node.Left)
+		}
+	}
+	return ans
+}
+```
+
+
+
+### 根据中序遍历和后序遍历得到二叉树
+
+ 思路可有以下优化点
+
+
+
+* 哈希表存储中序`inorder[]`数值对应下标，避免暴力遍历找
+
+* 递归过程中参数避免传数组，用`left、rightleft、rightleft、right`下标去代替
+
+
+
+```go
+/**
+ * Definition for a binary tree node.
+ * type TreeNode struct {
+ *     Val int
+ *     Left *TreeNode
+ *     Right *TreeNode
+ * }
+ */
+func buildTree(inorder []int, postorder []int) *TreeNode {
+    var f func(ins , pos , len int) *TreeNode
+    // 取头去尾
+    f = func (ins , pos , len int) *TreeNode{
+        if len == 0 {
+            return nil
+        }
+        tree := &TreeNode{}
+        tree.Val = postorder[pos + len - 1]
+        if len == 1 {
+            return tree
+        }
+        i := 0
+        for i < len && tree.Val != inorder[i + ins] {
+            i++
+        }
+        tree.Left = f(ins, pos, i)
+        tree.Right = f(ins + i + 1, pos + i, len - 1 - i)
+        return tree
+    }
+    return f(0,0,len(inorder))
+}
+```
+
+
+
+### 根据前后序遍历构造二叉树
+
+```go
+// 后序遍历的倒序的第二个一定是根节点的右节点吗？
+ // 通过与前序遍历的第二个数进行比较，不相等的话一定有右子树; 
+ // 相等的话只有一个子树，左右都有可能。这时是分辨不出来的，可以忽略
+ // 建立一个hash表来存储前序中值的索引，快速定位，避免暴力遍历
+
+func constructFromPrePost(preorder []int, postorder []int) *TreeNode {
+	var recurtion func(preS, preE, posS, posE int) *TreeNode
+	indexMap := make(map[int]int)
+	for i := 0; i < len(preorder); i++ {
+		indexMap[preorder[i]] = i
+	}
+	fmt.Println(indexMap)
+	// 取头取尾
+	recurtion = func(preS, preE, posS, posE int) *TreeNode {
+		nodeLen := preE - preS + 1
+		node := &TreeNode{}
+		node.Val = preorder[preS]
+		if nodeLen <= 0 {
+			return nil
+		}
+		if nodeLen == 1 {
+			return node
+		}
+		if postorder[posE-1] == preorder[preS+1] {
+			node.Left = recurtion(preS+1, preE, posS, posE-1)
+		} else {
+			index := indexMap[postorder[posE-1]]
+			leftEndIndex := index - 1 - (preS + 1) + posS
+			rightStartIndex := posE - 1 + index - preE
+
+			node.Left = recurtion(preS+1, index-1, posS, leftEndIndex)
+			node.Right = recurtion(index, preE, rightStartIndex, posE-1)
+		}
+		return node
+	}
+	res := recurtion(0, len(preorder)-1, 0, len(preorder)-1)
+	return res
+}
+```
+
 
 
