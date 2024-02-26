@@ -633,7 +633,7 @@ Go 的可执行文件都比相对应的源代码文件要大很多，这恰恰�
   132
   ```
 
-  defer 延迟调用时，需要保存函数指针和参数，因此链式调用的情况下，除了最后一个函数/方法外的函数/方法都会在调用时直接执行。也就是说 `t.f(1)` 直接执行，然后执行 `fmt.Print(3)`，最后函数返回时再执行 `.f(2)`，因此输出是 132
+  defer 延迟调用时，需要保存函数指针和参数，因此链式调用的情况下，除了最后一个函数方法外的函数方法都会在调用时直接执行。也就是说 `t.f(1)` 直接执行，然后执行 `fmt.Print(3)`，最后函数返回时再执行 `.f(2)`，因此输出是 132
 
   #### 2.
 
@@ -1393,6 +1393,265 @@ func BenchmarkRangePointer(b *testing.B) {
 	}
 }
 ```
+
+
+
+#### 4. 反射性能
+
+> #### 案例
+
+假设有一个配置类 Config，每个字段是一个配置项。为了简化实现，假设字段均为 string 类型：
+
+```go
+type Config struct {
+	Name    string `json:"server-name"`
+	IP      string `json:"server-ip"`
+	URL     string `json:"server-url"`
+	Timeout string `json:"timeout"`
+}
+```
+
+配置默认从 `json` 文件中读取，如果环境变量中设置了某个配置项，则以环境变量中的配置为准。
+
+配置项和环境变量对应的规则非常简单：将 json 字段的字母转为大写，将 `-` 转为下划线，并添加 `CONFIG_` 前缀。
+
+最终的对应结果如下：
+
+```go
+type Config struct {
+	Name    string `json:"server-name"` // CONFIG_SERVER_NAME
+	IP      string `json:"server-ip"`   // CONFIG_SERVER_IP
+	URL     string `json:"server-url"`  // CONFIG_SERVER_URL
+	Timeout string `json:"timeout"`     // CONFIG_TIMEOUT
+}
+```
+
+运用反射实现
+
+```go
+unc readConfig() *Config {
+	// read from xxx.json，省略
+	config := Config{}
+	typ := reflect.TypeOf(config)
+	value := reflect.Indirect(reflect.ValueOf(&config))
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if v, ok := f.Tag.Lookup("json"); ok {
+			key := fmt.Sprintf("CONFIG_%s", strings.ReplaceAll(strings.ToUpper(v), "-", "_"))
+			if env, exist := os.LookupEnv(key); exist {
+				value.FieldByName(f.Name).Set(reflect.ValueOf(env))
+			}
+		}
+	}
+	return &config
+}
+
+func main() {
+	os.Setenv("CONFIG_SERVER_NAME", "global_server")
+	os.Setenv("CONFIG_SERVER_IP", "10.0.0.1")
+	os.Setenv("CONFIG_SERVER_URL", "geektutu.com")
+	c := readConfig()
+	fmt.Printf("%+v", c)
+}
+```
+
+实现逻辑其实是非常简单的：
+
+- 在运行时，利用反射获取到 `Config` 的每个字段的 `Tag` 属性，拼接出对应的环境变量的名称。
+- 查看该环境变量是否存在，如果存在，则将环境变量的值赋值给该字段。
+
+运行该程序，输出为：
+
+```
+&{Name:global_server IP:10.0.0.1 URL:geektutu.com Timeout:}
+```
+
+> #### 性能测试
+
+**创建对象：**
+
+```go
+func BenchmarkNew(b *testing.B) {
+	var config *Config
+	for i := 0; i < b.N; i++ {
+		config = new(Config)
+	}
+	_ = config
+}
+
+func BenchmarkReflectNew(b *testing.B) {
+	var config *Config
+	typ := reflect.TypeOf(Config{})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		config, _ = reflect.New(typ).Interface().(*Config)
+	}
+	_ = config
+}
+------------------------
+$ go test -bench .          
+goos: darwin
+goarch: amd64
+pkg: example/hpg-reflect
+BenchmarkNew-8                  26478909                40.9 ns/op
+BenchmarkReflectNew-8           18983700                62.1 ns/op
+PASS
+ok      example/hpg-reflect     2.382s
+```
+
+通过反射创建对象的耗时约为 `new` 的 1.5 倍，相差不是特别大。
+
+**修改字段值：**
+
+通过反射获取结构体的字段有两种方式，一种是 `FieldByName`，另一种是 `Field`(按照下标)。前面的例子中，我们使用的是 `FieldByName`。
+
+```go
+func BenchmarkSet(b *testing.B) {
+	config := new(Config)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		config.Name = "name"
+		config.IP = "ip"
+		config.URL = "url"
+		config.Timeout = "timeout"
+	}
+}
+
+func BenchmarkReflect_FieldSet(b *testing.B) {
+	typ := reflect.TypeOf(Config{})
+	ins := reflect.New(typ).Elem()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ins.Field(0).SetString("name")
+		ins.Field(1).SetString("ip")
+		ins.Field(2).SetString("url")
+		ins.Field(3).SetString("timeout")
+	}
+}
+
+func BenchmarkReflect_FieldByNameSet(b *testing.B) {
+	typ := reflect.TypeOf(Config{})
+	ins := reflect.New(typ).Elem()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ins.FieldByName("Name").SetString("name")
+		ins.FieldByName("IP").SetString("ip")
+		ins.FieldByName("URL").SetString("url")
+		ins.FieldByName("Timeout").SetString("timeout")
+	}
+}
+---------------
+$ go test -bench="Set$" .          
+goos: darwin
+goarch: amd64
+pkg: example/hpg-reflect
+BenchmarkSet-8                          1000000000               0.302 ns/op
+BenchmarkReflect_FieldSet-8             33913672                34.5 ns/op
+BenchmarkReflect_FieldByNameSet-8        3775234               316 ns/op
+PASS
+ok      example/hpg-reflect     3.066s
+```
+
+总结一下，对于一个普通的拥有 4 个字段的结构体 `Config` 来说，使用反射给每个字段赋值，相比直接赋值，性能劣化约 100 - 1000 倍。其中，`FieldByName` 的性能相比 `Field` 劣化 10 倍。
+
+```
+通过源码可以看出来：
+而 (t *structType) FieldByName 中使用 for 循环，逐个字段查找，字段名匹配时返回。也就是说，在反射的内部，字段是按顺序存储的，因此按照下标访问查询效率为 O(1)，而按照 Name 访问，则需要遍历所有字段，查询效率为 O(N)。结构体所包含的字段(包括方法)越多，那么两者之间的效率差距则越大。
+```
+
+> #### 提高性能
+
+* #### 避免使用反射
+
+使用反射赋值，效率非常低下，如果有替代方案，尽可能避免使用反射，特别是会被反复调用的热点代码。例如 RPC 协议中，需要对结构体进行序列化和反序列化，这个时候避免使用 Go 语言自带的 `json` 的 `Marshal` 和 `Unmarshal` 方法，因为标准库中的 json 序列化和反序列化是利用反射实现的。可选的替代方案有 [easyjson](https://github.com/mailru/easyjson)，在大部分场景下，相比标准库，有 5 倍左右的性能提升。
+
+* #### 缓存
+
+在上面的例子中可以看到，`FieldByName` 相比于 `Field` 有一个数量级的性能劣化。那在实际的应用中，就要避免直接调用 `FieldByName`。我们可以利用字典将 `Name` 和 `Index` 的映射缓存起来。避免每次反复查找，耗费大量的时间。
+
+我们利用缓存，优化下刚才的测试用例：
+
+#### 5. 空结构体节省内存
+
+在 Go 语言中，我们可以使用 `unsafe.Sizeof` 计算出一个数据类型实例需要占用的字节数。
+
+用来测试空结构体可以发现所占的空间为0；可以说明空结构体能够很好的节省空间。
+
+> ###  2 空结构体的作用
+
+因为空结构体不占据内存空间，因此被广泛作为各种场景下的占位符使用。一是节省资源，二是空结构体本身就具备很强的语义，即这里不需要任何值，仅作为占位符。
+
+> #### 2.1 实现集合(Set)
+
+Go 语言标准库没有提供 Set 的实现，通常使用 map 来代替。事实上，对于集合来说，只需要 map 的键，而不需要值。即使是将值设置为 bool 类型，也会多占据 1 个字节，那假设 map 中有一百万条数据，就会浪费 1MB 的空间。
+
+因此呢，将 map 作为集合(Set)使用时，可以将值类型定义为空结构体，仅作为占位符使用即可。
+
+```
+type Set map[string]struct{}
+
+func (s Set) Has(key string) bool {
+	_, ok := s[key]
+	return ok
+}
+
+func (s Set) Add(key string) {
+	s[key] = struct{}{}
+}
+
+func (s Set) Delete(key string) {
+	delete(s, key)
+}
+
+func main() {
+	s := make(Set)
+	s.Add("Tom")
+	s.Add("Sam")
+	fmt.Println(s.Has("Tom"))
+	fmt.Println(s.Has("Jack"))
+}
+```
+
+> #### 2.2 不发送数据的信道(channel)
+
+```
+func worker(ch chan struct{}) {
+	<-ch
+	fmt.Println("do something")
+	close(ch)
+}
+
+func main() {
+	ch := make(chan struct{})
+	go worker(ch)
+	ch <- struct{}{}
+}
+```
+
+有时候使用 channel 不需要发送任何的数据，只用来通知子协程(goroutine)执行任务，或只用来控制协程并发度。这种情况下，使用空结构体作为占位符就非常合适了。
+
+> #### 2.3 仅包含方法的结构体
+
+```
+type Door struct{}
+
+func (d Door) Open() {
+	fmt.Println("Open the door")
+}
+
+func (d Door) Close() {
+	fmt.Println("Close the door")
+}
+```
+
+在部分场景下，结构体只包含方法，不包含任何的字段。例如上面例子中的 `Door`，在这种情况下，`Door` 事实上可以用任何的数据结构替代。例如：
+
+```
+type Door int
+type Door bool
+```
+
+无论是 `int` 还是 `bool` 都会浪费额外的内存，因此呢，这种情况下，声明为空结构体是最合适的。
 
 
 

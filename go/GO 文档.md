@@ -4,11 +4,52 @@
 
 LOOP 是 Go 语言中的一个标签（label），用于标记[循环语句](https://so.csdn.net/so/search?q=循环语句&spm=1001.2101.3001.7020)。它由用户定义的标识符后跟一个冒号（:）构成。在这段代码中，使用标签的目的是为了同时跳出内部的 select 语句和外部的 for 循环。
 
+## flag
+
+> 这个库提供了完善的命令行参数解析功能和文件解析功能。
+
+### 命令行参数
+
+配置参数
+
+```go
+var (
+	host     string
+	dbName   string
+	port     int
+	user     string
+	password string
+)
+func main() {
+	flag.StringVar(&host, "host", "", "数据库地址")
+	flag.StringVar(&dbName, "db_name", "", "数据库名称")
+	flag.StringVar(&user, "user", "", "数据库用户")
+	flag.StringVar(&password, "password", "", "数据库密码")
+	flag.IntVar(&port, "port", 3306, "数据库端口")
+
+	flag.Parse()
+
+	fmt.Printf("数据库地址:%s\n", host)
+	fmt.Printf("数据库名称:%s\n", dbName)
+	fmt.Printf("数据库用户:%s\n", user)
+	fmt.Printf("数据库密码:%s\n", password)
+	fmt.Printf("数据库端口:%d\n", port)
+}
+
+go run main.go -host=localhost -user=test -password=123456 -db_name=test -port=3305
+--------------------------
+数据库地址:localhost
+数据库名称:test
+数据库用户:test
+数据库密码:123456
+数据库端口:3305
+```
+
 
 
 ## container
 
-### /list
+### /list 栈和队列
 
 List结构：
 

@@ -199,11 +199,37 @@ func removeElement(nums []int, val int) int {
 }
 ```
 
+## 二、链表
+
+### 206. 反转链表
+
+![](image\206.翻转链表.gif)
+
+```go
+func reverseList(head *ListNode) *ListNode {
+    var pre *ListNode
+    cur := head
+    for cur != nil{
+        temp := cur.Next
+        cur.Next = pre
+        pre = cur
+        cur = temp
+    }
+    return pre
+}
+```
 
 
-## 二、二叉树
+
+## 三、二叉树
+
+### 后序遍历（迭代法）
+
+再来看后序遍历，先序遍历是中左右，后续遍历是左右中，那么我们只需要调整一下先序遍历的代码顺序，就变成中右左的遍历顺序，然后在反转result数组，输出的结果顺序就是左右中了，如下图：
 
 ### 迭代遍历
+
+前序遍历
 
 ```go
 type TreeNode struct {
@@ -237,13 +263,16 @@ func preorderTraversal(root *TreeNode) []int {
 }
 ```
 
+中序遍历
+
+```go
+```
+
 
 
 ### 根据中序遍历和后序遍历得到二叉树
 
  思路可有以下优化点
-
-
 
 * 哈希表存储中序`inorder[]`数值对应下标，避免暴力遍历找
 
@@ -289,7 +318,7 @@ func buildTree(inorder []int, postorder []int) *TreeNode {
 ### 根据前后序遍历构造二叉树
 
 ```go
-// 后序遍历的倒序的第二个一定是根节点的右节点吗？
+ // 后序遍历的倒序的第二个一定是根节点的右节点吗？
  // 通过与前序遍历的第二个数进行比较，不相等的话一定有右子树; 
  // 相等的话只有一个子树，左右都有可能。这时是分辨不出来的，可以忽略
  // 建立一个hash表来存储前序中值的索引，快速定位，避免暴力遍历
@@ -329,5 +358,110 @@ func constructFromPrePost(preorder []int, postorder []int) *TreeNode {
 }
 ```
 
+### 2476. 二叉搜索树最近节点查询
 
+> 迭代中序遍历 + map索引
+
+```go
+func closestNodes(root *TreeNode, queries []int) [][]int {
+    result := make([][]int, len(queries))
+    indexMap := make(map[int][]int,0)
+    
+    for i := 0; i < len(queries); i++ {
+        _, ok := indexMap[queries[i]] 
+        if ok {
+            indexMap[queries[i]] = append(indexMap[queries[i]], i)
+        } else {
+            indexMap[queries[i]] = make([]int, 0)
+            indexMap[queries[i]] = append(indexMap[queries[i]], i)
+        }
+        result[i] = make([]int, 2)
+        result[i][0] = -1
+        result[i][1] = -1
+    }
+    sort.Ints(queries)
+    st := list.New()
+    cur := root
+    index := 0
+    lastVal := -1
+    
+    for cur != nil || st.Len() > 0 {
+        if index == len(queries) {
+            return result
+        }
+        if cur != nil {
+            st.PushBack(cur)
+            cur = cur.Left
+        } else {
+            cur = st.Remove(st.Back()).(*TreeNode)
+            for index < len(queries){
+                if queries[index] == cur.Val {
+                    for r := 0; r < len(indexMap[queries[index]]); r++ {
+                        i := indexMap[queries[index]][r]
+                        result[i][1] = cur.Val
+                        result[i][0] = cur.Val
+                    }
+                    index += len(indexMap[queries[index]])
+                } else if queries[index] < cur.Val {
+                    for r := 0; r < len(indexMap[queries[index]]); r++ {
+                        i := indexMap[queries[index]][r]
+                        result[i][1] = cur.Val
+                        result[i][0] = lastVal
+                    }
+                    index += len(indexMap[queries[index]])
+                } else {
+                    break
+                }
+            }
+            lastVal = cur.Val
+            cur = cur.Right
+        }
+    }
+    if index != len(queries) {
+        for j := index; j < len(queries);j++ {
+            k := indexMap[queries[j]][0]
+            result[k][0] = lastVal
+        }
+    }
+    return result
+}
+```
+
+### 235. 二叉搜索树的最近公共祖先
+
+给定一个二叉搜索树, 找到该树中两个指定节点的最近公共祖先。
+
+[百度百科](https://baike.baidu.com/item/最近公共祖先/8918834?fr=aladdin)中最近公共祖先的定义为：“对于有根树 T 的两个结点 p、q，最近公共祖先表示为一个结点 x，满足 x 是 p、q 的祖先且 x 的深度尽可能大（**一个节点也可以是它自己的祖先**）。”
+
+* #### 思路
+
+  由于二叉搜索树是有序的，所以只要找到一个节点的值在这两个节点数值的中间，就可以保证这个节点一定是**最近公共祖先**。
+
+```go
+func lowestCommonAncestor(root, p, q *TreeNode) *TreeNode {
+    st := list.New()
+    st.PushBack(root)
+    if p.Val > q.Val {
+        p,q = q,p
+    }
+    node := &TreeNode{}
+
+
+    for st.Len() != 0 {
+        node = st.Remove(st.Back()).(*TreeNode)
+        if (node.Val > p.Val && node.Val < q.Val) || node.Val == p.Val || node.Val == q.Val {
+                break
+        } else if node.Val < p.Val{
+            if node.Right != nil {
+                st.PushBack(node.Right)
+            }
+        } else if node.Val > q.Val{
+            if node.Left != nil {
+                st.PushBack(node.Left)
+            }
+        }
+    }
+    return node
+}
+```
 

@@ -1,5 +1,86 @@
 # 面试题
 
+* #### golang 中 make 和 new 的区别？（基本必问）
+
+  > 所以从这里可以看的很明白了，二者都是内存的分配（堆上），但是`make`只用于slice、map以及channel的初始化（非零值）；而`new`用于类型的内存分配，并且内存置为零。所以在我们编写程序的时候，就可以根据自己的需要很好的选择了。
+  >
+  > `make`返回的还是这三个引用类型本身；而`new`返回的是指向类型的指针。
+
+  对于变量的声明，我们可以通过关键字`var`。当我们使用`var`关键字对变量进行声明后，变量会有默认的值，例如整型是0，对于引用类型是nil.
+
+  那我们来看看下面这个例子：
+
+  ```go
+  func main() {
+  	var i *int
+  	*i = 10
+  	fmt.Println(i)
+  }
+  -------------------
+  panic: runtime error: invalid memory address or nil pointer dereference
+  ```
+
+  从结果来看，对于引用类型，我们不仅要声明，还要申请内存空间。
+
+  **第一个知识点是：`new`和`make`都是分配内存的关键字 **
+
+  ### new
+
+  > ```go
+  > // The new built-in function allocates memory. The first argument is a type,
+  > // not a value, and the value returned is a pointer to a newly
+  > // allocated zero value of that type.
+  > func new(Type) *Type
+  > ```
+
+  解决问题：
+
+  ```go
+  func main() {
+  	var i *int
+      i = new(int)
+  	*i = 10
+  	fmt.Println(i)
+  }
+  ```
+
+  再看下一个例子
+
+  ```go
+  func main() {
+      u:=new(user)
+      u.lock.Lock()
+      u.name = "张三"
+      u.lock.Unlock()
+  
+      fmt.Println(u)
+  }
+  
+  type user struct {
+      lock sync.Mutex
+      name string
+      age int
+  }
+  ```
+
+  这里的关键点在于`user`结构体中的引用属性不用初始化，就直接可以拿来使用。
+
+  **是因为`new`它的返回值类型永远是指针，指向分配类型的内存空间**
+
+  ### make
+
+  `make`也是用于内存分配的，但是和`new`不同，它只用于`chan`、`map`以及切片的内存创建，而且它返回的类型就是这三个类型本身，而不是他们的指针类型，因为这三种类型就是引用类型，所以就没有必要返回他们的指针了。
+
+  注意，因为这三种类型是引用类型，所以必须得初始化，但是不是置为零值，这个和`new`是不一样的。
+
+  ```go
+  func make(t Type, size ...IntegerType) Type
+  ```
+
+  从函数声明中可以看到，返回的还是该类型。
+
+  
+
 ## 1 Go的垃圾回收机制？GMP模型？
 
 Go的垃圾回收机制？GMP模型？（展盟，百度，滴滴，小米）

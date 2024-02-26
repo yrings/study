@@ -88,6 +88,15 @@ m2 := map[string]string{
 }
 // 赋值/修改
 m1["Tom"] = 18
+// 判断键是否存在
+name,ok := test["姓名"] // 假如key存在,则name = 李四 ，ok = true,否则，ok = false
+    if ok{
+        fmt.Println(name)
+    }
+// 遍历
+for key,value := range mymap {
+                fmt.Println(key,":",value)
+        }
 ```
 
 ### 1.3 指针（pointer）
