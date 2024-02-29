@@ -219,6 +219,34 @@ func reverseList(head *ListNode) *ListNode {
 }
 ```
 
+### 24. 两两交换链表中的节点
+
+```go
+func swapPairs(head *ListNode) *ListNode {
+    if head == nil || head.Next == nil {
+        return head
+    }
+    var pre *ListNode
+    save := head.Next
+    cur := head
+    next := head.Next
+    for {
+        if pre != nil {
+            pre.Next = next
+        }
+        cur.Next = next.Next
+        next.Next = cur
+        if cur.Next == nil || cur.Next.Next == nil {
+            break
+        }
+        pre = cur
+        cur = cur.Next
+        next = cur.Next
+    }
+    return save
+}
+```
+
 
 
 ## 三、二叉树
@@ -464,4 +492,72 @@ func lowestCommonAncestor(root, p, q *TreeNode) *TreeNode {
     return node
 }
 ```
+
+
+
+### 2673. 使二叉树所有路径值相等的最小代价
+
+> 给你一个整数 `n` 表示一棵 **满二叉树** 里面节点的数目，节点编号从 `1` 到 `n` 。根节点编号为 `1` ，树中每个非叶子节点 `i` 都有两个孩子，分别是左孩子 `2 * i` 和右孩子 `2 * i + 1` 。
+>
+> 树中每个节点都有一个值，用下标从 **0** 开始、长度为 `n` 的整数数组 `cost` 表示，其中 `cost[i]` 是第 `i + 1` 个节点的值。每次操作，你可以将树中 **任意** 节点的值 **增加** `1` 。你可以执行操作 **任意** 次。
+>
+> 你的目标是让根到每一个 **叶子结点** 的路径值相等。请你W返回 **最少** 需要执行增加操作多少次。
+>
+> **注意：**
+>
+> - **满二叉树** 指的是一棵树，它满足树中除了叶子节点外每个节点都恰好有 2 个子节点，且所有叶子节点距离根节点距离相同。
+> - **路径值** 指的是路径上所有节点的值之和。
+
+* ### 思路
+
+  对于任一叶结点，它的值为 xxx，它的兄弟节点的值为 yyy。可以发现，对于树上的其余节点，它们要么同时是这两个叶节点的祖先，要么同时不是这两个叶节点的祖先。对这些节点进行一次操作，要么同时增加了根到这两个叶节点的路径值 111，要么没有任何效果。因此，要想使得根到这两个叶节点的路径值相等，我们只能增加 xxx 和 yyy 本身。
+
+  ```go
+  func minIncrements(n int, cost []int) (ans int) {
+  	for i := n / 2; i > 0; i-- { // 从最后一个非叶节点开始算
+  		left, right := cost[i*2-1], cost[i*2]
+  		if left > right { // 保证 left <= right
+  			left, right = right, left
+  		}
+  		ans += right - left // 两个子节点变成一样的
+  		cost[i-1] += right // 累加路径和
+  	}
+  	return
+  }
+  ```
+
+
+
+
+### 49.字母异位词分组
+
+> 给你一个字符串数组，请你将 **字母异位词** 组合在一起。可以按任意顺序返回结果列表。
+>
+> **字母异位词** 是由重新排列源单词的所有字母得到的一个新单词。
+
+* **思路**
+
+  通过桶排序，创建一个map，以`[26]int`数组为key，然后遍历所有字符串，统计每个字符出现的次数，如果两个字符串能够满足条件，他们的key就会相同，就添加到对于key的后边就可以满足进行分组了。
+
+```go
+func groupAnagrams(strs []string) [][]string {
+    m := make(map[[26]int][]string)
+    for _, v := range strs {
+        cnt := [26]int{}
+        for _, c := range v {
+            cnt[c-'a']++
+        }
+        m[cnt] = append(m[cnt], v)
+    }
+    ans := make([][]string, 0, len(strs))
+    for _, v := range m {
+        ans = append(ans, v)
+    }
+    return ans
+}
+```
+
+
+
+
 
