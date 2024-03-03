@@ -1203,8 +1203,6 @@ func (b *Builder) String() string {
 
 > To build strings more efficiently, see the strings.Builder type.
 
-
-
 #### 2. 切片slice性能及陷阱
 
 在 Go 语言中，切片(slice)可能是使用最为频繁的数据结构之一，切片类型为处理同类型数据序列提供一个方便而高效的方式。
@@ -1216,8 +1214,6 @@ func (b *Builder) String() string {
 > #### 切片操作
 
 删除操作由于需要移动元素，故每次删除的复杂度为O(n)，并不适合大量删除场景
-
-
 
 
 
