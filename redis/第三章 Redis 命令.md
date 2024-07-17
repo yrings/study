@@ -850,7 +850,7 @@ entries 也是 listPack 中真正的列表，由很多的列表元素 entry 构�
 
 ### 3.12 HyperLogLog 操作命令
 
-> HyperLogLog 是 Redis 2.8.9 版本中引入的一种新的数据类型，其意义是 hyperlog log，超 级日志记录。该数据类型可以简单理解为一个 set 集合，集合元素为字符串。但实际上 HyperLogLog 是一种基数计数概率算法，通过该算法可以利用极小的内存完成独立总数的统 计。其所有相关命令都是对这个“set 集合”的操作。 
+> HyperLogLog 是 Redis 2.8.9 版本中引入的一种新的数据类型，其意义是 hyperlog log，超级日志记录。该数据类型可以简单理解为一个 set 集合，集合元素为字符串。但实际上 HyperLogLog 是一种基数计数概率算法，通过该算法可以利用极小的内存完成独立总数的统 计。其所有相关命令都是对这个“set 集合”的操作。 
 >
 > HyperLogLog 算法是由法国人 Philippe Flajolet 博士研究出来的，Redis 的作者 Antirez 为了纪念 Philippe Flajolet 博士对组合数学和基数计算算 法分析的研究，在设计 HyperLogLog 命令的时候使用了 Philippe Flajolet 姓名的英文首字母 PF 作为前缀。遗憾的是 Philippe Flajolet 博士于 2011 年 3 月 22 日因病在巴黎辞世。 HyperLogLog 算法是一个纯数学算法，我们这里不做研究
 

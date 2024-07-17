@@ -13,10 +13,14 @@
 
 
 
+
+
 - `<meta charset="utf-8">`——该元素指明你的文档使用 UTF-8 字符编码，UTF-8 包括世界绝大多数书写语言的字符。它基本上可以处理任何文本内容。以它为编码还可以避免以后出现某些问题，没有理由再选用其他编码。
 - `<meta name="viewport" content="width=device-width">`——[视口元素](https://developer.mozilla.org/zh-CN/docs/Web/CSS/Viewport_concepts#移动设备的视口)可以确保页面以视口宽度进行渲染，避免移动端浏览器上因页面过宽导致缩放。
 
-## [通过 GitHub 发布](https://developer.mozilla.org/zh-CN/docs/Learn/Getting_started_with_the_web/Publishing_your_website#通过_github_发布)
+
+
+[通过 GitHub 发布](https://developer.mozilla.org/zh-CN/docs/Learn/Getting_started_with_the_web/Publishing_your_website#通过_github_发布)
 
 现在，让我们通过 Github 页面告诉你公布的你的代码是如此的简单。
 

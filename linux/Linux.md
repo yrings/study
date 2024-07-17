@@ -1,5 +1,26 @@
 # Linux
 
+## 常用指令
+
+```shell
+ls # 列出当前目录中的文件和子目录
+
+pwd # 显示当前工作目录的路径
+
+cd <...> # 切换到指定工作目录
+
+mkdir <name> # 创建新目录
+rmdir <name> # 删除指定空目录
+
+rm -r <name> # 递归删除文件或目录
+
+cp -r <source> <destination> # 递归复制文件或目录
+
+touch <name> # 创建空文件或更新文件的时间戳
+
+cat  <name> # 连接和显示文件内容
+```
+
 ## 查看进程
 
 关键字: linux 查进程、杀进程、起进程

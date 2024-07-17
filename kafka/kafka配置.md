@@ -129,3 +129,64 @@
 | ssl.keymanager.algorithm                               | 密钥管理器工厂用于SSL连接的算法。  默认值是为Java虚拟机配置的密钥管理器工厂算法。 | string   | SunX509                 |                          | low        |
 | ssl.secure.random.implementation                       | 用于SSL加密操作的SecureRandom  PRNG实现。                    | string   | null                    |                          | low        |
 | ssl.trustmanager.algorithm                             | 信任管理器工厂用于SSL连接的算法。  默认值是为Java虚拟机配置的信任管理器工厂算法。 | string   | PKIX                    |                          | low        |
+
+
+
+
+
+## go 中sarama配置
+
+1. **Admin**：用于管理Kafka集群的配置。
+   - `Retry.Max`: 最大重试次数。
+   - `Retry.Backoff`: 重试间隔时间。
+   - `Timeout`: 操作超时时间。
+2. **Net**：网络相关配置。
+   - `MaxOpenRequests`: 最大打开的请求数。
+   - `DialTimeout`: 连接超时时间。
+   - `ReadTimeout`: 读取超时时间。
+   - `WriteTimeout`: 写入超时时间。
+   - `SASL.Handshake`: 是否启用SASL握手。
+   - `SASL.Version`: SASL版本。
+3. **Metadata**：元数据相关配置。
+   - `Retry.Max`: 最大重试次数。
+   - `Retry.Backoff`: 重试间隔时间。
+   - `RefreshFrequency`: 元数据刷新频率。
+   - `Full`: 是否请求完整的元数据。
+   - `AllowAutoTopicCreation`: 是否允许自动创建主题。
+4. **Producer**：生产者相关配置。
+   - `MaxMessageBytes`: 最大消息字节数。
+   - `RequiredAcks`: 等待确认的方式。
+   - `Timeout`: 操作超时时间。
+   - `Partitioner`: 分区器。
+   - `Retry.Max`: 最大重试次数。
+   - `Retry.Backoff`: 重试间隔时间。
+   - `Return.Errors`: 是否返回错误。
+   - `CompressionLevel`: 压缩级别。
+5. **Producer.Transaction**：生产者事务相关配置。
+   - `Timeout`: 事务超时时间。
+   - `Retry.Max`: 最大重试次数。
+   - `Retry.Backoff`: 重试间隔时间。
+6. **Consumer**：消费者相关配置。
+   - `Fetch.Min`: 最小拉取消息的字节数。
+   - `Fetch.Default`: 默认拉取消息的字节数。
+   - `Retry.Backoff`: 重试间隔时间。
+   - `MaxWaitTime`: 最大等待时间。
+   - `MaxProcessingTime`: 最大处理时间。
+   - `Return.Errors`: 是否返回错误。
+   - `Offsets.AutoCommit.Enable`: 是否启用自动提交位移。
+   - `Offsets.AutoCommit.Interval`: 自动提交位移的间隔时间。
+   - `Offsets.Initial`: 初始位移。
+   - `Offsets.Retry.Max`: 最大重试次数。
+7. **Consumer.Group**：消费者组相关配置。
+   - `Session.Timeout`: 会话超时时间。
+   - `Heartbeat.Interval`: 心跳间隔时间。
+   - `Rebalance.GroupStrategies`: 组重新平衡策略。
+   - `Rebalance.Timeout`: 重新平衡超时时间。
+   - `Rebalance.Retry.Max`: 重新平衡最大重试次数。
+   - `Rebalance.Retry.Backoff`: 重新平衡重试间隔时间。
+   - `ResetInvalidOffsets`: 是否重置无效的位移。
+8. **ClientID**: 客户端ID。
+9. **ChannelBufferSize**: 通道缓冲区大小。
+10. **ApiVersionsRequest**: 是否发送API版本请求。
+11. **Version**: Kafka协议版本。
+12. **MetricRegistry**: 度量指标注册表。

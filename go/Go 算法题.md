@@ -2,6 +2,93 @@
 
 ## ACM模式
 
+### 构造二叉树
+
+```
+输入: 1 null 2 3
+输出: [1,2,3]
+```
+
+
+
+``` go
+// @File : main
+// @Author : yrings
+// @Time : 2024/7/16
+package main
+
+import (
+	"bufio"
+	"container/list"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+)
+
+type TreeNode struct {
+	Val   int
+	Right *TreeNode
+	Left  *TreeNode
+}
+
+func main() {
+	in := bufio.NewScanner(os.Stdin)
+
+	for in.Scan() {
+		data := strings.Split(in.Text(), " ")
+		root := new(TreeNode)
+		st := list.New()
+		st.PushBack(root)
+		index := 1
+		val, _ := strconv.Atoi(data[0])
+		root.Val = val
+		for st.Len() > 0 && index < len(data) {
+			node := st.Remove(st.Front()).(*TreeNode)
+			if index < len(data) && data[index] != "null" {
+				v, _ := strconv.Atoi(data[index])
+				node.Left = &TreeNode{Val: v}
+				st.PushBack(node.Left)
+			}
+			index++
+			if index < len(data) && data[index] != "null" {
+				v, _ := strconv.Atoi(data[index])
+				node.Right = &TreeNode{Val: v}
+				st.PushBack(node.Right)
+			}
+			index++
+		}
+		result := preorderTraversal(root)
+		fmt.Println("result:", result)
+	}
+}
+
+func preorderTraversal(root *TreeNode) []int {
+	ans := []int{}
+
+	if root == nil {
+		return ans
+	}
+	st := list.New()
+	st.PushBack(root)
+
+	for st.Len() > 0 {
+		node := st.Remove(st.Back()).(*TreeNode)
+		ans = append(ans, node.Val)
+		if node.Right != nil {
+			st.PushBack(node.Right)
+		}
+		if node.Left != nil {
+			st.PushBack(node.Left)
+		}
+	}
+	return ans
+}
+
+```
+
+
+
 * ### 读取数字
 
   > 要读取一行数字，计算它们的和。给出多行数据。
@@ -668,6 +755,423 @@ func (s *MyStack) Empty() bool {
     return len(s.queue1) == 0
 }
 ```
+
+
+
+### 2386. 找出数组的第 K 大和
+
+> 首先，我们找到最大的子序和 mxmxmx，即所有正数之和。
+>
+> 可以发现，其他子序列的和，都可以看成在这个最大子序列和之上，减去其他部分子序列之和得到。因此，我们可以将问题转换为求第 kkk 小的子序列和。
+>
+> 只需要将所有数的绝对值升序排列，之后建立小根堆，存储二元组 (s,i)(s, i)(s,i)，表示当前和为 sss，且下一个待选择的数字的下标为 iii 的子序列。
+>
+> 每次取出堆顶，并放入两种新情况：一是再选择下一位，二是选择下一位并且不选择本位。
+>
+> 由于数组是从小到大排序，这种方式能够不重不漏地按序遍历完所有的子序列和。
+
+```go
+func kSum(nums []int, k int) int64 {
+	mx := 0
+	for i, x := range nums {
+		if x > 0 {
+			mx += x
+		} else {
+			nums[i] *= -1
+		}
+	}
+	sort.Ints(nums)
+	h := &hp{{0, 0}}
+	for k > 1 {
+		k--
+		p := heap.Pop(h).(pair)
+		if p.i < len(nums) {
+			heap.Push(h, pair{p.sum + nums[p.i], p.i + 1})
+			if p.i > 0 {
+				heap.Push(h, pair{p.sum + nums[p.i] - nums[p.i-1], p.i + 1})
+			}
+		}
+	}
+	return int64(mx) - int64((*h)[0].sum)
+}
+
+type pair struct{ sum, i int }
+type hp []pair
+
+func (h hp) Len() int           { return len(h) }
+func (h hp) Less(i, j int) bool { return h[i].sum < h[j].sum }
+func (h hp) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *hp) Push(v any)        { *h = append(*h, v.(pair)) }
+func (h *hp) Pop() any          { a := *h; v := a[len(a)-1]; *h = a[:len(a)-1]; return v }
+```
+
+
+
+### 189. 轮转数组
+
+```go
+func reverse(a []int) {
+    for i, n := 0, len(a); i < n/2; i++ {
+        a[i], a[n-1-i] = a[n-1-i], a[i]
+    }
+}
+func rotate(nums []int, k int) {
+    k %= len(nums)
+    reverse(nums)
+    reverse(nums[:k])
+    reverse(nums[k:])
+}
+```
+
+
+
+### 2313. 买木头块
+
+> ### 动态规划/记忆化搜索
+
+给你两个整数 `m` 和 `n` ，分别表示一块矩形木块的高和宽。同时给你一个二维整数数组 `prices` ，其中 `prices[i] = [hi, wi, pricei]` 表示你可以以 `pricei` 元的价格卖一块高为 `hi` 宽为 `wi` 的矩形木块。
+
+每一次操作中，你必须按下述方式之一执行切割操作，以得到两块更小的矩形木块：
+
+- 沿垂直方向按高度 **完全** 切割木块，或
+- 沿水平方向按宽度 **完全** 切割木块
+
+在将一块木块切成若干小木块后，你可以根据 `prices` 卖木块。你可以卖多块同样尺寸的木块。你不需要将所有小木块都卖出去。你 **不能** 旋转切好后木块的高和宽。
+
+请你返回切割一块大小为 `m x n` 的木块后，能得到的 **最多** 钱数。
+
+注意你可以切割木块任意次。
+
+```go
+func sellingWood(m int, n int, prices [][]int) int64 {
+    value := make(map[[2]int]int, 0)
+    memo := make([][]int64, m + 1)
+    for i := range memo {
+        memo[i] = make([]int64, n+1)
+        for j := range memo[i] {
+            memo[i][j] = -1
+        }
+    }
+
+    var dfs func(int, int) int64
+    dfs = func(x, y int) int64 {
+        if memo[x][y] != -1 {
+            return memo[x][y]
+        }
+
+        var ret int64
+        if val, ok := value[[2]int{x, y}]; ok {
+            ret = int64(val)
+        }
+        if x > 1 {
+            for i := 1; i < x; i++ {
+                ret = max(ret, dfs(i, y) + dfs(x - i, y))
+            }
+        }
+        if y > 1 {
+            for j := 1; j < y; j++ {
+                ret = max(ret, dfs(x, j) + dfs(x, y - j))
+            }
+        }
+        memo[x][y] = ret
+        return ret
+    }
+
+    for _, price := range prices {
+        value[[2]int{price[0], price[1]}] = price[2]
+    }
+    return dfs(m, n)
+}
+```
+
+
+
+
+
+### 406.根据身高重建队列
+
+> 假设有打乱顺序的一群人站成一个队列，数组 `people` 表示队列中一些人的属性（不一定按顺序）。每个 `people[i] = [hi, ki]` 表示第 `i` 个人的身高为 `hi` ，前面 **正好** 有 `ki` 个身高大于或等于 `hi` 的人。
+>
+> 请你重新构造并返回输入数组 `people` 所表示的队列。返回的队列应该格式化为数组 `queue` ，其中 `queue[j] = [hj, kj]` 是队列中第 `j` 个人的属性（`queue[0]` 是排在队列前面的人）。
+
+按照身高排序之后，优先按身高高的people的k来插入，后序插入节点也不会影响前面已经插入的节点，最终按照k的规则完成了队列。
+
+```go
+func reconstructQueue(people [][]int) [][]int {
+    // 先将身高从大到小排序，确定最大个子的相对位置
+    sort.Slice(people, func(i, j int) bool {
+        if people[i][0] == people[j][0] {
+            return people[i][1] < people[j][1]   // 当身高相同时，将K按照从小到大排序
+        }
+        return people[i][0] > people[j][0]     // 身高按照由大到小的顺序来排
+    })
+
+    // 再按照K进行插入排序，优先插入K小的
+	for i, p := range people {
+		copy(people[p[1]+1 : i+1], people[p[1] : i+1])  // 空出一个位置
+		people[p[1]] = p
+	}
+	return people
+}
+```
+
+
+
+### 343.整数拆分
+
+> 给定一个正整数 n，将其拆分为至少两个正整数的和，并使这些整数的乘积最大化。 返回你可以获得的最大乘积
+
+```go
+func integerBreak(n int) int {
+    dp := make([]int, n + 1)
+    dp[0] = 0
+    dp[1] = 1
+    dp[2] = 1
+    for i := 3; i <= n; i++ {
+        for j := 2; j < i; j++ {
+            num1 := i / j
+            num2 := i - num1
+            dp[i] = max(dp[i], max(dp[num1], num1 )* max(dp[num2], num2))
+        }
+    }
+    return dp[n]
+
+}
+```
+
+
+
+### 435. 无重叠区间
+
+![](.\image-al\20230201164134.png)
+
+**我来按照右边界排序，从左向右记录非交叉区间的个数。最后用区间总数减去非交叉区间的个数就是需要移除的区间个数了**。
+
+区间4结束之后，再找到区间6，所以一共记录非交叉区间的个数是三个。
+
+总共区间个数为6，减去非交叉区间的个数3。移除区间的最小数量就是3。
+
+```go
+func eraseOverlapIntervals(intervals [][]int) int {
+    sort.Slice(intervals, func(i, j int) bool {
+        return intervals[i][1] < intervals[j][1]
+    })
+    res := 1
+    for i := 1; i < len(intervals); i++ {
+        if intervals[i][0] >= intervals[i-1][1] {
+            res++
+        } else {
+            intervals[i][1] = min(intervals[i - 1][1], intervals[i][1])
+        }
+    }
+    return len(intervals) - res
+}
+```
+
+
+
+### 96. 不同的二叉搜索树
+
+![](.\image-al\20210107093226241.png)
+
+首先一定是遍历节点数，从递归公式：dp[i] += dp[j - 1] * dp[i - j]可以看出，节点数为i的状态是依靠 i之前节点数的状态。
+
+```go
+func numTrees(n int) int {
+    if n <= 2 {
+        return n
+    }
+    dp := make([]int, n + 1)
+    dp[0] = 1
+    dp[1] = 1
+    dp[2] = 2
+    for i := 3; i <= n; i++ {
+        for j := 1; j <= i; j++ {
+            dp[i] += dp[j - 1] * dp[i - j]
+        }
+    }
+    return dp[n]
+}
+```
+
+
+
+### 763. 划分字母区间
+
+第一步：记录所有字母最后出现的索引
+
+第二步：遍历字符串，维护片段最大索引
+
+```go
+func partitionLabels(s string) []int {
+    res := make([]int, 0)
+    // 记录所有字母出现的最后索引
+    m := make(map[string]int)
+    for i := 0; i < len(s); i++ {
+        m[string(s[i])] = i
+    }
+    
+    for index := 0; index < len(s);{
+        lastIndex := index
+        for index <= lastIndex {
+            lastIndex = max(lastIndex, m[string(s[index])])
+            index++
+        }
+        length := lastIndex
+        for j := 0; j < len(res); j++ {
+            length -= res[j]
+        }
+        res = append(res, length + 1)
+    }
+    return res
+}
+```
+
+
+
+### 背包问题
+
+![](.\image-al\20210117171307407.png)
+
+
+
+```go
+package main
+
+import "fmt"
+
+func test_wei_bag_problem1(weight, value []int, bagWeight int) int {
+	if bagWeight <= 0 {
+		return 0
+	}
+	dp := make([][]int, len(weight))
+	for i := 0; i < len(weight); i++ {
+		dp[i] = make([]int, bagWeight+1)
+	}
+	// 初始化
+	for j := bagWeight; j >= weight[0]; j-- {
+		dp[0][j] = dp[0][j-weight[0]] + value[0]
+	}
+	// 递推公式
+	for j := 0; j <= bagWeight; j++ {
+		for i := 1; i < len(weight); i++ {
+			if weight[i] > j {
+				dp[i][j] = dp[i-1][j]
+			} else {
+				dp[i][j] = max(dp[i-1][j], dp[i-1][j-weight[i]]+value[i])
+			}
+		}
+	}
+	return dp[len(weight)-1][bagWeight]
+}
+
+func max(a, b int) int {
+    if a > b {
+        return a
+    } else {
+        return b
+    }
+}
+
+func main() {
+	var M, N int
+	_, err := fmt.Scanln(&M, &N)
+	if err != nil {
+		return
+	}
+	weight := make([]int, M)
+	for i := 0; i < M; i++ {
+		if _, er := fmt.Scan(&weight[i]); er != nil {
+			return
+		}
+	}
+	value := make([]int, M)
+	for i := 0; i < M; i++ {
+		if _, er := fmt.Scan(&value[i]); er != nil {
+			return
+		}
+	}
+	//fmt.Printf("M: %v, N: %v, weight:%v, value: %v\n", M, N, weight, value)
+	maxValue := test_wei_bag_problem1(weight, value, N)
+	fmt.Println(maxValue)
+}
+```
+
+
+
+
+
+### 738. 单调递增数字
+
+贪心
+
+```go
+func monotoneIncreasingDigits(n int) int {
+    arr := make([]int, 0)
+    for n > 0 {
+        y := n % 10
+        n = n / 10
+        if y == 0 {
+            y = 9
+            for i := 0; i < len(arr); i++ {
+                arr[i] = 9 
+            }
+            n -= 1
+        }
+        if len(arr) > 0 && y > arr[len(arr) - 1] {
+            y -= 1
+            for i := 0; i < len(arr); i++ {
+                arr[i] = 9 
+            }
+            if y == 0 {
+                n -= 1
+                y = 9
+            }
+        }
+        arr = append(arr, y)
+    }
+    res := 0
+    for i := 0; i < len(arr); i++ {
+        t := int(math.Pow(10, float64(i)))
+        res += arr[i] * t
+    }
+    return res
+}
+```
+
+
+
+
+
+### 416. 分割等和子集
+
+01背包问题，一维滚动数组
+
+```go
+func canPartition(nums []int) bool {
+    target := 0
+    for i := 0; i < len(nums); i++ {
+        target += nums[i]
+    }
+    if target % 2 == 1 {
+        return false
+    } else {
+        target = target / 2
+    }
+    dp := make([]int, target + 1)
+
+    for i := 0; i < len(nums); i++ {
+        for j := target; j >= nums[i]; j-- {
+            dp[j] = max(dp[j], dp[j - nums[i]] + nums[i])
+        }
+    }
+    return dp[target] == target
+}
+```
+
+
+
+### 968. 监控二叉树
 
 
 

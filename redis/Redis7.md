@@ -442,7 +442,7 @@ cat /proc/sys/net/core/somaxconn
 >
 > 对集群有影响（后面涉及到的）
 
-#### memory management
+#### memory management（淘汰策略）
 
 > 该配置可以控制最大可用内存及相关内容移除问题
 

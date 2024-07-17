@@ -204,36 +204,38 @@ func make(t Type, size ...IntegerType) Type
 
   * `misses` 用来记录读取数据未命中 `read` 的次数，达到一定阈值就会将`dirty`拷贝到`read`中。因为数据的插入操作都是在  `dirty` 中进行的。
 
-  * `p`指针，用来指向value值，有三种状态`nil`、`expunged`(已删除)、`[value]`
+  * `p`指针，用来指向value值，有三种状态`nil`、`expunged`(已删除)、`[value]`。
 
+    如果是`expunged `状态，表示在`dirty`中没有该映射，只有在首次设置 `m.dirty[key] = e `后才能更新条目的关联值，以便使用脏映射的查找找到该条目。当成功设置映射时，就会将状态改变为`nil`
+    
     
 
   关于 `sync.Map` 的插入与删除, 底层都用到了大量的`CAS`操作。
 
   * **查询操作**
-
+  
     1. 先到`read`中去查找key是否存在，如果不存在并且`amended`字段为true就会对`sync.Map`加锁；对`read`进行二次查找，如果还是没找到，就会去`dirty`中查找。
     2. 在`dirty`查找，并且让`misses`加一，**如果`misses`的值大于等于`dirty`的长度，就会让`read` 中的map更新为`dirty`，并设置`dirty` 为 nil。**
 
   * **插入操作**
-
-    1. 先在 `read`中查找key是否存在，如果存在就会，判断`entry`中的指针 p 状态是否为`pxpunged`，如果不是就执行`CAS`操作更新值；
+  
+    1. 先在 `read`中查找key是否存在，如果存在就会，判断`entry`中的指针 p 状态是否为`expunged`（删除），如果不是就执行`CAS`操作更新值；
     2. 如果`read`中 key 不存在，或者`CAS`执行失败，就会对`sync.Map`加锁，再次查找`read`中key是否存在，如果存在使用函数`e.unexpungeLock()`判断`entry`中`p`的状态，如果是`expunged`，改成`nil`，成功后增加该`entry`到`dirty`中；最后执行`swapLocked()`更新值操作。**这些底层都是原子操作**。
     3. 如果二次查找 `read` 还不存在，检查 `dirty` 中是否存在，如果存在就直接执行`swapLocked()`更新值操作。
     4. 如果都不存在并且`amended`为 false ，就会触发`dirtyLocked()`函数，如果`dirty`为nil，对`dirty`初始化，并遍历`read`中的map，如果`p`为nil，转变成`expunged`，否则，将`entry`添加到`dirty`；设置`amended`为true。（这一步是保证当`dirty`由于`Range()`函数或者`misses`达到阈值时使得其未nil后的第一次添加元素时，为`dirty`初始化分配内存空间）之后就会在`dirty`中创建插入新的`entry`
 
   * **删除操作**
-
+  
     1. 先在`read`中查找，如果不存在就加锁再次在`read`中查找，如果查找到就让key对应`entry`中的指针为nil
     2. 如果还不在就在`dirty`中寻找，并且让`misses`加一
-    3. 如果在 `dirty`中找到，就删除`dirty`中对应的`entry`
+    3. 如果在 `dirty`中找到，就删除`dirty`中对应的`entry`，即变为nil
 
   * **Range 函数**
 
     **如果`amended`为true，`read` 中的map更新为`dirty`，并将`dirty`设置为nil，amended设置为false**；之久后开始遍历`read`中的map。
 
   * ### **总结**
-
+  
     
 
 ### map的扩容机制
@@ -241,6 +243,16 @@ func make(t Type, size ...IntegerType) Type
 * ### 数据结构
 
   ```go
+  // Map contains Type fields specific to maps.
+  type Map struct {
+      Key  *Type // Key type
+      Elem *Type // Val (elem) type
+  
+      Bucket *Type // internal struct type representing a hash bucket
+      Hmap   *Type // internal struct type representing the Hmap (map header object)
+      Hiter  *Type // internal struct type representing hash iterator state
+  }
+  
   type hmap struct {
   	count     int
   	flags     uint8
@@ -333,11 +345,265 @@ func make(t Type, size ...IntegerType) Type
 
 
 
+## 7. defer 
+
+defer执行顺序和调用顺序相反，类似于栈**后进先出**(LIFO)。
+
+defer在return之后执行，但在函数退出之前，defer可以修改返回值。下面是一个例子：
+
+**对于无名返回值会创建一个临时变量保存返回值**
+
+上面这个例子中，test返回值并没有修改，这是由于Go的返回机制决定的，执行Return语句后，Go会创建一个临时变量保存返回值
+
+```go
+func test() int {
+	i := 0
+	defer func() {
+		fmt.Println("defer1")
+	}()
+	defer func() {
+		i += 1
+		fmt.Println("defer2")
+	}()
+	return i
+}
+
+func main() {
+	fmt.Println("return", test())
+}
+// defer2
+// defer1
+// return 0
+```
+
+**如果是有名返回值函数，执行 return 语句时，并不会再创建临时变量保存，因此，defer 语句修改了 i，即对返回值产生了影响**
+
+```go
+func test() (i int) {
+	i = 0
+	defer func() {
+		i += 1
+		fmt.Println("defer2")
+	}()
+	return i
+}
+
+func main() {
+	fmt.Println("return", test())
+}
+// defer2
+// return 1
+```
+
+
+
+## 8. 函数
+
+### Go 支持默认参数或可选参数吗
+
+不支持。但是可以利用结构体参数，或者...传入参数切片数组
+
+```go
+func sum(nums ...int) {
+    total := 0
+    for _, num := range nums {
+        total += num
+    }
+    fmt.Println(total)
+}
+```
+
+## 9. 切片
+
+### 如何判断 2 个字符串切片是相等的？
+
+`reflect.DeepEqual()`, 但是反射非常影响性能
+
+
+
+## 其它
+
+### Go 语言 tag 的用处？
+
+tag可以为结构体成员提供属性。常见的：
+
+1. json序列化或反序列化时字段的名称
+2. db: sqlx模块中对应的数据库字段名
+3. form: gin框架中对应的前端的数据字段名
+4. binding: 搭配 form 使用, 默认如果没查找到结构体中的某个字段则不报错值为空, binding为 required 代表没找到返回错误给前端
+
+
+
+### 如何获取一个结构体中的所有tag？
+
+```go
+import reflect
+type Author struct {
+    Name int `jons:Name`
+    Publications []string `json:Publication, omitempty`
+}
+func main() {
+    t := reflect.TypeOf(Author{})
+    for i := 0; i < t.NumField(); i++ {
+        name := t.Field(i).Name
+        s, _ := t.FieldByName(name)
+        fmt.Println(name, s.Tag)
+    }
+}
+```
+
+### 
+
+### 结构体打印时，`%v` 和 `%+v` 的区别
+
+`%v`输出结构体各成员的值；
+
+`%+v`输出结构体各成员的**名称**和**值**；
+
+`%#v`输出结构体名称和结构体各成员的名称和值
+
+
+
+### Go 语言中如何表示枚举值（enums）
+
+在常量中用 `iota`可以表示枚举。iota从0开始
+
+```go
+/* 
+1KB = 1,000Byte
+1MB = 1,000KB
+1GB = 1,000,000 KB
+
+1KiB = 1024Byte
+1Mib = 1024KiB
+...
+*/
+const (
+	B = 1 << (10 * iota)
+    //代表一个二进制数：10000000000    该数转换为十进制为2的10次方即1024
+	KiB 
+	MiB
+	GiB
+	TiB
+	PiB
+	EiB
+)
+```
+
+
+
+### Go 里面的int和int32是同一个概念吗
+
+不是同一个概念，千万不要混淆。go语言中的int的大小是和操作系统位数相关的，如果是32位操作系统，int类型的大小就是4字节。如果是64位，就是8字节。
+
+
+
+## 实现原理
+
+### 01. init() 函数是什么时候执行的？
+
+在main函数之前执行。
+
+**详细**：init()函数是go初始化的一部分，由runtime初始化每个导入的包，初始化不是按照从上到下的导入顺序，**而是按照解析的依赖关系，没有依赖的包最先初始化。**
+
+每个包首先初始化包作用域的常量和变量（常量优先于变量），然后执行包的`init()`函数。同一个包，甚至是同一个源文件可以有多个`init()`函数。**`init()`函数没有入参和返回值，不能被其他函数调用，同一个包内多个`init()`函数的执行顺序不作保证。**
+
+执行顺序：`import –> const –> var –>init()–>main()`
+
+
+
+### 02. 如何知道一个对象是分配在栈上还是堆上？
+
+Go和C++不同，Go局部变量会进行**逃逸分析**。如果**变量离开作用域后没有被引用**，则**优先**分配到栈上，否则分配到堆上。那么如何判断是否发生了逃逸呢？
+
+`go build -gcflags '-m -m -l' xxx.go`.
+
+关于逃逸的可能情况：变量大小不确定，变量类型不确定，变量分配的内存超过用户栈最大值，暴露给了外部指针。
+
+
+
+### 03. 2个 interface 可以比较吗？
+
+Go语言中，interface 的内部实现包括了2个字段，一个是类型T，和值V。两个interface可以通过 `!=` 和 `==` 来判断是否相等，但是会出现两种情况：
+
+1. 两个都是nil，T和V都是unset状态，这时是相等的
+2. 两个类型T相等，V相等，==才是true
+
+
+
+### 04. 2 个nil可能不相等吗？
+
+可能不等。interface在运行时绑定值，只有值为nil接口值才为nil，但是与指针的nil不相等。举个例子：
+
+```text
+var p *int = nil
+var i interface{} = nil
+if(p == i){
+	fmt.Println("Equal")
+}
+```
+
+两者并不相同。总结：**两个nil只有在类型相同时才相等**。
+
+
+
+### 05.  简述 Go 语言GC的工作原理
+
+
+
+### 06. 函数返回局部变量的指针是否安全？
+
+这一点和C++不同，在Go里面返回局部变量的指针是安全的。因为Go会进行**逃逸分析**，如果发现局部变量的作用域超过该函数则会**把指针分配到堆区**，避免内存泄漏。
 
 
 
 
 
+
+
+### 08. go slice 是如何扩容的？
+
+**Go <= 1.17**
+
+如果当前容量小于1024，则判断所需容量是否大于原来容量2倍，如果大于，当前容量加上所需容量；否则当前容量乘2。
+
+如果当前容量大于1024，则每次按照1.25倍速度递增容量，也就是每次加上cap/4。
+
+**Go 1.18 之后，引入了新的扩容规则：**
+
+首先会判断两倍容量是否满足所需最小容量，如果不满足，预估容量就是所需最小容量。否则进入下面的判断。
+
+如果当前容量小于256，就按照2倍是速率扩容。
+
+对于超过等于256的容量的切片就是按照下面这个公式来扩容。
+
+```go
+const threshold = 256
+newcap += (newcap + 3*threshold) / 4
+/* 
+这个公式，对于容量小的切片，按照2倍的速率扩容和对于容量大的切片，按照1.25倍的速度扩容，为两者提供了平滑的过渡。
+*/
+```
+
+
+
+获取到预估容量后，还要进行内存对齐：以整型为例，预估容量 *元素类型的大小，也即是 5* 8 = 40 bytes （64位环境下）。
+
+那么经过roundupsize函数调整，得到结果为 48 bytes，而48 bytes可以装下6个元素，对应调整代码为:
+
+```go
+newcap = int(capmem / et.size)
+```
+
+所以，最终容量的大小被调整为6。
+
+其中`roundupsize`函数位于在`./src/runtime/msize.go`文件中。
+
+它的作用是：返回mallocgc将分配的内存块的大小。
+
+**也就是，由Go语言的内存管理模块返回给你需要的内存块，通常这些内存块都是预先申请好，并且被分为常用的规格，比如8，16， 32， 48， 64等。**
+
+**这里我们需要的内存是40 bytes，所以会分配一个足够用，且最接近的内存块。所以给48bytes，这时，重新调整后的容量 newcap就为6。
 
 
 

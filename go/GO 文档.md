@@ -4,6 +4,21 @@
 
 LOOP 是 Go 语言中的一个标签（label），用于标记[循环语句](https://so.csdn.net/so/search?q=循环语句&spm=1001.2101.3001.7020)。它由用户定义的标识符后跟一个冒号（:）构成。在这段代码中，使用标签的目的是为了同时跳出内部的 select 语句和外部的 for 循环。
 
+## rand
+
+```go
+// 获取指定范围随机数，[0,n)
+func Intn(n int) int
+// 打乱数组或切片
+rand.Shuffle(len(arr), func(i, j int) {
+      arr[i], arr[j] = arr[j], arr[i]
+   })
+```
+
+
+
+
+
 ## flag
 
 > 这个库提供了完善的命令行参数解析功能和文件解析功能。

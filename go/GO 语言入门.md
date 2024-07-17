@@ -1070,7 +1070,7 @@ func main() {
   - cmd中：
 
     ```shell
-    go get -u -v github.com/gorilla/websocket`
+    go get -u -v github.com/gorilla/websocket
     go get -u github.com/gorilla/mux  
     ```
 
